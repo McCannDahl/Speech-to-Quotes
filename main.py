@@ -1,47 +1,79 @@
 import typer
+import json
+from fuzzywuzzy import fuzz 
 
-def getQuotes(s):
-    return []
+bom = None
+with open('scriptures-json/book-of-mormon.json') as f:
+  bom = json.load(f)
+totalNumSentances = 0
+for book in bom['books']:
+    for chapter in book['chapters']:
+        for verse in chapter['verses']:
+            for sentence in verse['text'].split('.'):
+                totalNumSentances += 1
 
-def main(inputFileName: str = 'input.txt',outputFileName: str = 'output.txt'):
+
+def getQuotes(s, threshold): # return [{'quote':str,'pct':float,'reference':str}]
+    returnData = []
+    with typer.progressbar(length=totalNumSentances) as progress:
+        for book in bom['books']:
+            for chapter in book['chapters']:
+                for verse in chapter['verses']:
+                    for sentence in verse['text'].split('.'):
+                        # r = fuzz.token_set_ratio(s, sentence) 
+                        r = fuzz.WRatio(s, sentence)
+                        if r > threshold*100 and s != '' and sentence != '':
+                            #print(f"s = {s}, r = {r}, s = {sentence}")
+                            returnData.append({
+                                'quote': sentence,
+                                'pct': r,
+                                'reference': f"({verse['reference']})"
+                            })
+                        progress.update(1)
+    return returnData
+
+def main(inputFileName: str = 'input.txt',outputFileName: str = 'output.txt', threshold: float = 0.8):
     typer.echo(f"Hello {inputFileName}")
+
     # 1) read file
     f = open(inputFileName, "r")
-    inputdata = []
+    inputdata = [] # [line][sentance] str
     for x in f:
         sentances = x.split('.')
         inputdata.append(sentances)
     f.close
-    # 3) get quotes
-    alldata = [] # [line][sentance] {'inputdata':str,'quotes':[{'quote':str,'pct':float}]}
+
+    # 2) get quotes
+    alldata = [] # [line][sentance] {'inputdata':str,'quotes':[{'quote':str,'pct':float,'reference':str}]}
     for line in inputdata:
         newLine = []
         for sentance in line:
-            newSentance = {'inputdata':sentance,'quotes':getQuotes(sentance)}
+            newSentance = {'inputdata':sentance,'quotes':getQuotes(sentance,threshold)}
             newLine.append(newSentance)
         alldata.append(newLine)
-    # 4) pick quotes
-    outputdata = [] # [line][sentance] {'inputdata':str,'quote':str/None}
+
+    # 3) pick quotes
+    outputdata = [] # [line][sentance] str
     for line in alldata:
         newLine = []
         for sentance in line:
-            newSentance = {'inputdata':sentance,'quote':None}
+            newSentance = sentance['inputdata']
             if len(sentance['quotes']) > 0:
                 maxQuotePct = 0
-                maxQuote = None
+                maxNewSentance = None
                 for q in sentance['quotes']:
                     if q['pct'] > maxQuotePct:
-                        maxQuote = q['quote']
+                        maxNewSentance = q['quote'] + q['reference']
                         maxQuotePct = q['pct']
-                newSentance['quote'] = maxQuote
+                if maxNewSentance is not None:
+                    newSentance = maxNewSentance
             newLine.append(newSentance)
         outputdata.append(newLine)
 
-
-    # 2) write file
+    # 4) write file
     f = open(outputFileName, 'w+')
     for line in outputdata:
-        newLine = '.'.join(line['inputdata'])
+        newLine = '.'.join(line)
         f.write(newLine)
     f.close()
 
