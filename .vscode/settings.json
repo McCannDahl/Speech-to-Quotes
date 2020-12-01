@@ -1,3 +1,5 @@
 {
-    "python.pythonPath": "/Users/mccanndahl/opt/anaconda3/bin/python"
+    "python.pythonPath": "C:\\Users\\mccda\\anaconda3\\envs\\math with sympy\\python.exe",
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
 }
