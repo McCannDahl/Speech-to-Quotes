@@ -3,6 +3,9 @@
 
 import typer
 import json
+from tabulate import tabulate
+
+app = typer.Typer()
 
 # Program to measure the similarity between 
 # two sentences using cosine similarity. 
@@ -68,7 +71,8 @@ def getQuotes(s, threshold): # return [{'quote':str,'pct':float,'reference':str}
     typer.echo(f" I found {len(returnData)} quote(s) related to '{s}'")
     return returnData
 
-def main(inputFileName: str = 'input.txt',outputFileName: str = 'output.txt', threshold: float = 0.3):
+@app.command()
+def auto(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt', threshold: float = 0.3):
     typer.echo(f"Hello! Lets turn your talk into quotes....")
 
     # 1) read file
@@ -90,7 +94,14 @@ def main(inputFileName: str = 'input.txt',outputFileName: str = 'output.txt', th
             newLine.append(newSentance)
         alldata.append(newLine)
 
-    # 3) pick quotes
+    # 3) write file
+    f = open(reviewFileName, 'w+')
+    for line in alldata:
+        json.dump(line, f)
+        f.write('\n')
+    f.close()
+
+    # 4) pick quotes
     outputdata = [] # [line][sentance] str
     for line in alldata:
         newLine = []
@@ -108,7 +119,7 @@ def main(inputFileName: str = 'input.txt',outputFileName: str = 'output.txt', th
             newLine.append(newSentance)
         outputdata.append(newLine)
 
-    # 4) write file
+    # 5) write file
     f = open(outputFileName, 'w+')
     for line in outputdata:
         newLine = '.'.join(line)
@@ -116,6 +127,46 @@ def main(inputFileName: str = 'input.txt',outputFileName: str = 'output.txt', th
     f.close()
 
 
+@app.command()
+def review(reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt'):
+    typer.echo(f"Hello! Lets review your quotes....")
+
+    # 1) read file
+    f = open(reviewFileName, "r")
+    alldata = [] 
+    for x in f:
+        alldata.append(json.loads(x))
+    f.close
+
+    # 2) pick quotes
+    outputdata = [] # [line][sentance] str
+    for line in alldata:
+        newLine = []
+        for sentance in line:
+            newSentance = sentance['inputdata']
+            if len(sentance['quotes']) > 0:
+                i = 0
+                tableData = []
+                for q in sentance['quotes']:
+                    tableData.append([i,q['reference'],round(q['pct']*100),q['quote']])
+                    i += 1
+                print(tabulate(tableData, headers=['Index', 'Reference', 'Match', 'Quote'], tablefmt='orgtbl'))
+                selectedIndex = typer.prompt(typer.style("Which index (or -1)?", fg=typer.colors.GREEN, bold=True))
+                if selectedIndex is not None and selectedIndex != '':
+                    sI = int(selectedIndex)
+                    if sI < len(sentance['quotes']) and sI >= 0:
+                        q = sentance['quotes'][sI]
+                        newSentance = q['quote'] + ' ' + q['reference']
+            newLine.append(newSentance)
+        outputdata.append(newLine)
+
+    # 3) write file
+    f = open(outputFileName, 'w+')
+    for line in outputdata:
+        newLine = '.'.join(line)
+        f.write(newLine)
+    f.close()
+
 if __name__ == "__main__":
-    typer.run(main)
+    app()
 
