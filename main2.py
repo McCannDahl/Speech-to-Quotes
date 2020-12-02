@@ -14,15 +14,70 @@ from nltk.tokenize import word_tokenize
 # sw contains the list of stopwords 
 sw = stopwords.words('english') 
 
-bom = None
-with open('scriptures-json/book-of-mormon.json') as f:
-  bom = json.load(f)
+############input data###################
+sources = [] # [{'name':name, 'references':[{'reference':reference},'quotes':[quote]]}]
 totalNumSentances = 0
-for book in bom['books']:
-    for chapter in book['chapters']:
-        for verse in chapter['verses']:
-            for sentence in verse['text'].split('.'):
-                totalNumSentances += 1
+
+###BOM###
+bom = None
+with open('scriptures-json/flat/book-of-mormon-flat.json') as f:
+  bom = json.load(f)
+references = []
+for verse in bom['verses']:
+    quotes = []
+    for sentence in verse['text'].split('.'):
+        quotes.append(sentence)
+        totalNumSentances += 1
+    references.append({'reference':verse['reference'],'quotes':quotes})
+sources.append({'name':'bom','references':references})
+###DNC###
+dnc = None
+with open('scriptures-json/doctrine-and-covenants.json') as f:
+  dnc = json.load(f)
+references = []
+for chapter in dnc['sections']:
+    for verse in chapter['verses']:
+        quotes = []
+        for sentence in verse['text'].split('.'):
+            quotes.append(sentence)
+            totalNumSentances += 1
+        references.append({'reference':verse['reference'],'quotes':quotes})
+sources.append({'name':'dnc','references':references})
+###pgp###
+pgp = None
+with open('scriptures-json/flat/pearl-of-great-price-flat.json') as f:
+  pgp = json.load(f)
+references = []
+for verse in pgp['verses']:
+    quotes = []
+    for sentence in verse['text'].split('.'):
+        quotes.append(sentence)
+        totalNumSentances += 1
+    references.append({'reference':verse['reference'],'quotes':quotes})
+sources.append({'name':'pgp','references':references})
+###bibleNT###
+bibleNT = None
+with open('scriptures-json/flat/new-testament-flat.json') as f:
+    bibleNT = json.load(f)
+references = []
+for verse in bibleNT['verses']:
+    quotes = []
+    for sentence in verse['text'].split('.'):
+        quotes.append(sentence)
+        totalNumSentances += 1
+    references.append({'reference':verse['reference'],'quotes':quotes})
+sources.append({'name':'bibleNT','references':references})
+###bibleOT###
+bibleOT = None
+with open('scriptures-json/flat/old-testament-flat.json') as f:
+    bibleOT = json.load(f)
+for verse in bibleOT['verses']:
+    quotes = []
+    for sentence in verse['text'].split('.'):
+        quotes.append(sentence)
+        totalNumSentances += 1
+    references.append({'reference':verse['reference'],'quotes':quotes})
+sources.append({'name':'bibleOT','references':references})
 
 def getSimilarity(X,Y):
     # tokenization 
@@ -55,19 +110,18 @@ def getSimilarity(X,Y):
 def getQuotes(s, threshold): # return [{'quote':str,'pct':float,'reference':str}]
     returnData = []
     with typer.progressbar(length=totalNumSentances) as progress:
-        for book in bom['books']:
-            for chapter in book['chapters']:
-                for verse in chapter['verses']:
-                    for sentence in verse['text'].split('.'): 
-                        r = getSimilarity(s, sentence)
-                        if r > threshold and s != '' and sentence != '':
-                            #print(f"s = {s}, r = {r}, s = {sentence}")
-                            returnData.append({
-                                'quote': sentence,
-                                'pct': r,
-                                'reference': f"({verse['reference']})"
-                            })
-                        progress.update(1)
+        for source in sources:
+            for reference in source['references']:
+                for sentence in reference['quotes']:
+                    r = getSimilarity(s, sentence)
+                    if r > threshold and s != '' and sentence != '':
+                        #print(f"s = {s}, r = {r}, s = {sentence}")
+                        returnData.append({
+                            'quote': sentence,
+                            'pct': r,
+                            'reference': f"({reference['reference']})"
+                        })
+                    progress.update(1)
     typer.echo(f" I found {len(returnData)} quote(s) related to '{s}'")
     return returnData
 
@@ -82,11 +136,19 @@ def getInputFileContents(inputFileName):
 
 def getAllQuotes(inputdata,threshold):
     alldata = [] # [line][sentance] {'inputdata':str,'quotes':[{'quote':str,'pct':float,'reference':str}]}
+    totalNumberOfSentancesToAnylize = 0
+    numberOfSentancesToAnylized = 0
+    for line in inputdata:
+        for sentance in line:
+            if sentance != '\n' and sentance != '':
+                totalNumberOfSentancesToAnylize += 1
     for line in inputdata:
         newLine = []
         for sentance in line:
             newSentance = {'inputdata':sentance,'quotes':[]}
             if sentance != '\n' and sentance != '':
+                numberOfSentancesToAnylized += 1
+                typer.secho(f"Processing {numberOfSentancesToAnylized}/{totalNumberOfSentancesToAnylize}", fg=typer.colors.BRIGHT_GREEN)
                 newSentance = {'inputdata':sentance,'quotes':getQuotes(sentance,threshold)}
             newLine.append(newSentance)
         alldata.append(newLine)
