@@ -126,6 +126,8 @@ def auto(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',ou
         f.write(newLine)
     f.close()
 
+def sortQuotes(q):
+    return q['pct']
 
 @app.command()
 def review(reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt'):
@@ -146,12 +148,11 @@ def review(reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt'
             newSentance = sentance['inputdata']
             if len(sentance['quotes']) > 0:
                 i = 0
-                tableData = []
+                sentance['quotes'].sort(reverse=True, key=sortQuotes)
                 for q in sentance['quotes']:
-                    tableData.append([i,q['reference'],round(q['pct']*100),q['quote']])
+                    typer.echo(typer.style(str(i)+") ", fg=typer.colors.RED)+typer.style(str(round(q['pct']*100))+"% ", fg=typer.colors.GREEN)+typer.style(q['reference']+" ", fg=typer.colors.CYAN)+typer.style(q['quote'], fg=typer.colors.BRIGHT_BLACK))
                     i += 1
-                print(tabulate(tableData, headers=['Index', 'Reference', 'Match', 'Quote'], tablefmt='orgtbl'))
-                selectedIndex = typer.prompt(typer.style("Which index (or -1)?", fg=typer.colors.GREEN, bold=True))
+                selectedIndex = typer.prompt(typer.style("Which index (or -1)?", fg=typer.colors.WHITE, bold=True))
                 if selectedIndex is not None and selectedIndex != '':
                     sI = int(selectedIndex)
                     if sI < len(sentance['quotes']) and sI >= 0:
