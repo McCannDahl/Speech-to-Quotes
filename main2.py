@@ -3,7 +3,7 @@
 
 import typer
 import json
-from tabulate import tabulate
+from os import path
 
 app = typer.Typer()
 
@@ -71,19 +71,16 @@ def getQuotes(s, threshold): # return [{'quote':str,'pct':float,'reference':str}
     typer.echo(f" I found {len(returnData)} quote(s) related to '{s}'")
     return returnData
 
-@app.command()
-def auto(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt', threshold: float = 0.3):
-    typer.echo(f"Hello! Lets turn your talk into quotes....")
-
-    # 1) read file
+def getInputFileContents(inputFileName):
     f = open(inputFileName, "r")
     inputdata = [] # [line][sentance] str
     for x in f:
         sentances = x.split('.')
         inputdata.append(sentances)
     f.close
+    return inputdata
 
-    # 2) get quotes
+def getAllQuotes(inputdata,threshold):
     alldata = [] # [line][sentance] {'inputdata':str,'quotes':[{'quote':str,'pct':float,'reference':str}]}
     for line in inputdata:
         newLine = []
@@ -93,15 +90,65 @@ def auto(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',ou
                 newSentance = {'inputdata':sentance,'quotes':getQuotes(sentance,threshold)}
             newLine.append(newSentance)
         alldata.append(newLine)
+    return alldata
 
-    # 3) write file
+
+def saveReviewFile(reviewFileName,contents):
     f = open(reviewFileName, 'w+')
-    for line in alldata:
+    for line in contents:
         json.dump(line, f)
         f.write('\n')
     f.close()
 
-    # 4) pick quotes
+def saveOutputFile(outputFileName,contents):
+    f = open(outputFileName, 'w+')
+    for line in outputdata:
+        newLine = '.'.join(line)
+        f.write(newLine)
+    f.close()
+
+def getReviewFileContents(reviewFileName):
+    f = open(reviewFileName, "r")
+    alldata = [] 
+    for x in f:
+        alldata.append(json.loads(x))
+    f.close
+    return alldata
+
+
+def sortQuotes(q):
+    return q['pct']
+
+def autoGetQutoes(inputFileName,reviewFileName,threshold):
+    typer.echo(f"Hello! Lets turn your talk into quotes....")
+    getQuotes = True
+    if path.exists(reviewFileName):
+        typer.echo(f"It looks like that review file already exists...")
+        getQuotes = typer.confirm("Do you want to get the quotes again?")
+
+    alldata = []
+
+    if getQuotes:
+        # 1) read file
+        inputdata = getInputFileContents(inputFileName)
+
+        # 2) get quotes
+        alldata = getAllQuotes(inputdata,threshold)
+
+        # 3) write review file
+        saveReviewFile(reviewFileName,alldata)
+    
+    else:
+        alldata = getReviewFileContents(reviewFileName)
+
+    return alldata
+
+@app.command()
+def auto(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt', threshold: float = 0.3):
+
+    alldata = autoGetQutoes(inputFileName,reviewFileName,threshold)
+
+    # auto pick quotes
     outputdata = [] # [line][sentance] str
     for line in alldata:
         newLine = []
@@ -119,28 +166,16 @@ def auto(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',ou
             newLine.append(newSentance)
         outputdata.append(newLine)
 
-    # 5) write file
-    f = open(outputFileName, 'w+')
-    for line in outputdata:
-        newLine = '.'.join(line)
-        f.write(newLine)
-    f.close()
+    # write file
+    saveReviewFile(outputFileName,outputdata)
 
-def sortQuotes(q):
-    return q['pct']
 
 @app.command()
-def review(reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt'):
-    typer.echo(f"Hello! Lets review your quotes....")
+def manual(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt', threshold: float = 0.3):
 
-    # 1) read file
-    f = open(reviewFileName, "r")
-    alldata = [] 
-    for x in f:
-        alldata.append(json.loads(x))
-    f.close
+    alldata = autoGetQutoes(inputFileName,reviewFileName,threshold)
 
-    # 2) pick quotes
+    # manual pick quotes
     outputdata = [] # [line][sentance] str
     for line in alldata:
         newLine = []
@@ -161,12 +196,8 @@ def review(reviewFileName: str = 'review.txt',outputFileName: str = 'output.txt'
             newLine.append(newSentance)
         outputdata.append(newLine)
 
-    # 3) write file
-    f = open(outputFileName, 'w+')
-    for line in outputdata:
-        newLine = '.'.join(line)
-        f.write(newLine)
-    f.close()
+    # write file
+    saveReviewFile(outputFileName,outputdata)
 
 if __name__ == "__main__":
     app()
