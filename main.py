@@ -118,12 +118,14 @@ def getQuotes(s, threshold): # return [{'quote':str,'pct':float,'reference':str}
                 for sentence in reference['quotes']:
                     r = getSimilarity(s, sentence)
                     if r > threshold and s != '' and sentence != '':
-                        #print(f"s = {s}, r = {r}, s = {sentence}")
-                        returnData.append({
+                        obj = {
                             'quote': sentence,
                             'pct': r,
                             'reference': f"({reference['reference']})"
-                        })
+                        }
+                        if obj not in returnData:
+                            #print(f"s = {s}, r = {r}, s = {sentence}")
+                            returnData.append(obj)
                     progress.update(1)
     typer.echo(f" I found {len(returnData)} quote(s) related to '{s}'")
     return returnData
@@ -251,8 +253,11 @@ def manual(inputFileName: str = 'input.txt', reviewFileName: str = 'review.txt',
             if len(sentance['quotes']) > 0:
                 i = 0
                 sentance['quotes'].sort(reverse=True, key=sortQuotes)
+                typer.echo(typer.style(f"Origional text: {sentance['inputdata']}", fg=typer.colors.WHITE, bold=False))
+                max_per_entry = 10
                 for q in sentance['quotes']:
-                    typer.echo(typer.style(str(i)+") ", fg=typer.colors.RED)+typer.style(str(round(q['pct']*100))+"% ", fg=typer.colors.GREEN)+typer.style(q['reference']+" ", fg=typer.colors.CYAN)+typer.style(q['quote'], fg=typer.colors.BRIGHT_BLACK))
+                    if i<max_per_entry:
+                        typer.echo(typer.style(str(i)+") ", fg=typer.colors.RED)+typer.style(str(round(q['pct']*100))+"% ", fg=typer.colors.GREEN)+typer.style(q['reference']+" ", fg=typer.colors.CYAN)+typer.style(q['quote'], fg=typer.colors.BRIGHT_BLACK))
                     i += 1
                 selectedIndex = typer.prompt(typer.style("Which index (or -1)?", fg=typer.colors.WHITE, bold=True))
                 if selectedIndex is not None and selectedIndex != '':
