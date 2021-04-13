@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\mccda\\anaconda3\\envs\\math with sympy\\python.exe",
+    "python.pythonPath": "C:\\Users\\mccda\\AppData\\Local\\Microsoft\\WindowsApps\\python3.8.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true
 }
